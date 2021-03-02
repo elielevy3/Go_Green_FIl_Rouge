@@ -1,0 +1,270 @@
+************************* DOC DJANGO *****************************
+
+************************ SETUP ***********************************
+
+*Installer Python:
+sudo apt-get update
+sudo apt-get install python3.6
+
+*Installer pip:
+sudo apt-get install python3-pip
+
+
+*Installer virtualenv:
+sudo pip3 install virtualenv
+
+
+*Créer un environnement avec virtualenv: 
+virtualenv nom_dossier_env/
+
+*Activer env: . ./nom_dossier_env/bin/activate
+*Quitter env: deactivate
+
+*Installer Django après avoir créer un env:
+Activer env
+$ 	python3 -m pip install Django
+
+*Verifier si django est installé: 
+Activer env puis $python3 -m django --version
+
+* Lancer l'interpreteur de commande lié à l'ORM : python3 manage.py shell
+
+*Lancer un script dans cet interpreteur de commande: exec(open("script.py").read())
+
+
+*************************** Projet/Application *********************************
+
+==> Un projet regroupe plusieurs applications, une application peut être utilisée par plusieurs projets
+
+
+*Créer un projet :  $ django-admin startproject mysite
+Depuis le repertoire dans lequel on souhaite garder le get_context_data
+
+
+*Lancer projet django:
+	aller dans le repertoire du projet
+    python3 manage.py runserver
+
+
+*Créer une app
+==> on se met dans le meme repertoire que manage.py (cad dans le repertoire projet)
+python3 manage.py startapp nom_app
+
+==> Un seul settings.py et manage.py par projet
+==> autant de models.py views.py test.py admin.py, etc... qu'il y a d'app
+
+************************* Models ********************************************
+
+*Rajouter dans INSTALLED_APPS l'app que l'on vient de créer
+
+*Générer un fichier sql de creation/modification de table : python3 manage.py makemigrations
+
+*Pour appliquer le dernier fichier généré : python3 manage.py migrate
+
+* utiliser le shell pour faire des requetes en base de données: python3 manage.py shell
+>>> from nom_app.models import nom_class
+
+*lister tous les tuples d'une table : 
+>>> nom_class.objects.all()
+
+
+*Créer un nouveau tuple:
+>>> u = Users(nom="Levy", prenom="Elie", mail="elie.levy@mail.com", addresse="1 avenue de la république", ville="Paris", age=24, mdp="1234")
+>>> u.save()
+
+*filtrer les tuples:
+>>> u = Users.objects.filter(id=1)
+
+*supprimer des tuples
+>>> u.delete()
+
+************************* VIEWS/Controller **********************************
+
+==> Un fichier urls.py par app et un pour chaque projet
+==> le fichier urls.py d'une app correspond au route de cette app
+==> le fichier urls.py d'un projet ne fait que regrouper les différents urls.py des app qu'il utilise
+
+
+
+*Rediriger : 
+	return HttpResponseRedirect(reverse('polls:result', args=(question_id,)))
+
+
+*Faire reference a une url via un namespace:
+
+    ==> dans les gabarits ou dans reverse
+
+*Recupérer un objet:
+
+    question = get_object_or_404(Question, pk=question_id)
+
+    try:
+		choice = question.objects.get(pk=question_id)
+	except:
+		// traitement, redirection, affichage des erreurs
+	else:
+
+
+*QUE VEUT DIRE "NE RIEN TROUVER" ? -Soit on ne trouve rien parce que nous ne sommes pas sensé trouvé qqchose
+                                  ==> Exemple : les defis releves d'un user qui n'existe pas ==> 404/Erreur
+                                  -Soit ou trouve l'information "RIEN" par exemple un user qui existe mais qui n'a relevé aucun challenge => {} on renverra un objet JSON vide
+
+************************* API*********************************************************************
+
+HttpResponse vs JsonResponse
+
+HttpResponse => -Renvoie uniquement de la données dont on peut préciser le type (html, json, etc...)
+				-On doit serialiser la donnée avant (avec serializer.serialize("json", données_a_transformer))
+                -On doit avoir des meta attributs comme le model (ex:User)
+
+JsonResponse => -Serialise la données a la volée mais celle-ci doit être une instance de dict
+                -Utilise un encodeur par defaut DjangoJSONEncoder
+                -Ne fait que transformer un dictionnaire en chaine de charactère pour la rendre transmissible sur le réseau
+
+
+On peut aussi utiliser le Django RestFrameWork:
+				-Pour les listes on hérite de APIView : pas besoin de dispatch/get_queryset
+				-Pour le details on hérite de generics.GenericView : On précise juste le queryset sur lequel filtrer et on appelle get_object()
+				-Dans les deux cas on renvoie une Response de rest_framework avec la données que l'on aurait mis dans JSONResponse (serializable) en précisant tatus=200 et safe=False 
+
+
+On peut créer nos propres serializer en précisant le model lié et les fields qu'on veut
+
+
+
+************************* UTILISATION DES CLASSES AU LIEU DES MÉTHODES ***************************
+
+==> LISTER TOUS LES USERS VERSIONS FONCTION
+
+ def listAll(request):
+     users = Users.objects.all().values()  
+     users_list = list(users) # on passe d'un query set a une liste d'objet
+     # on set safe a false pour indiquer qu'il faut serializer l'objet passé en paramètre (la liste users_list)
+     return JsonResponse(users_list, safe=False)
+
+==> LISTER TOUS LES USERS VERSIONS CLASSES:
+-On hérite de ListView qui est classe générique pour les lister toutes les instances d'une entité
+-On précise l'entité (le model en django), ici model=Users
+-Maintenant on peut définir un comportement spécifique pour chaque cas de figure dans lequel cette classe est appelée.
+On peut donc différencier un requete post/get avec les methodes respectives plutot qu'avec un if (request[type] == "GET")
+Plus globalement on peut spécialiser des méthodes comme get_queryset avec un comportement particulier
+Bien sur on peut heriter de cette classe la pour implémenter des traitement similaires mais subtilement différent
+plutot que de copier coller le code d'une fonction et de modifier le contenu d'un if, etc....
+
+
+class UserList(ListView):
+	model = Users
+	def dispatch(self, request, *args, **kwargs):
+		return super(UserList, self).dispatch(request, *args, **kwargs)
+
+	def get_queryset(self):
+			#on précise sur quel set on va filtrer avec get_object et en ne gardant pas les méta informations
+			#si on garde les meta informations, users object is not serializable parce qu'il y a des données 
+			# en plus avec lesquelles on ne sait pas quoi faire 
+			#on peut avoir un attribut queryset ou spécialiser la méthode get_queryset()
+	queryset = Users.objects.all().values()
+
+	def get(self, request, *args, **kwargs):
+		queryset = self.get_queryset()
+		return JsonResponse(list(queryset), status=200, safe=False)
+
+** utiliser get_object_or_404 plutot que juste get_object: Si on ne trouve pas d'user pour filtrer ensuite sur les défis relevés (ou les scores), on leve tout de suite une 404 plutot que d'afficher une erreur coté serveur de type : Users matching query does not exist
+
+
+********************************DJANGO REST FRAMEWORK***********************
+
+ON A 3 NIVEAUX D'ABSTRACTION POUR LES VUES: 1) -APIVIEW (et ses enfants)
+											2) -GENERICVIEW (et les mixins/enfants)
+											3) -VIEWSET
+
+********* APIVIEW *****************
+
+(variante des apiview plus spécialisée)
+class UserDetails(RetrieveAPIView):
+	model = Users
+	queryset = Users.objects.all().values()
+	def get(self, request, *args, **kwargs):
+		return Response(self.get_object())
+
+==> Fonctionne pour les get parce que retrieveAPI serialize elle meme la données (sous classe de APIview)
+
+
+class UserDetails(APIView):
+	def get_object(self, pk):
+		return get_object_or_404(Users, pk=pk)
+
+	def get(self, request, pk, format=None):
+		serializer = UserSerializer(self.get_object(pk))
+		return Response(serializer.data)
+
+	def delete(self, request, pk, format=None):
+		user = self.get_object(pk)
+		user.delete()
+		return Response("Element id :", pk, " supprimé.", status=200)
+
+	def put(self, request, pk, format=None):
+		user = self.get_object(pk)
+		serializer = UserSerializer(user, data=request.data)
+		if serializer.is_valid():
+		    serializer.save()
+		    return Response(serializer.data)
+		return Response(serializer.errors)
+
+class UserList(APIView):
+	model = Users
+	def get(self, request, *args, **kwargs):
+		return Response(list(Users.objects.all().values()))
+
+	def post(self, request, format=None):
+		serializer = UserSerializer(data=request.data)
+		if serializer.is_valid():
+			serializer.save()
+			return Response(serializer.data)
+
+==> fonctionne mais on est obligé de serializer nous meme (APIView ne serialize pas la donnée)
+
+==> le get_object() d'APIView renvoie un objet python (non sérialisé) alors que le get_object() de RetrieveAPIView renvoie un dict prêt à être sérialisé
+
+
+****** VUES GÉNÉRIQUES ***************
+
+class UserList(generics.ListCreateAPIView):
+    queryset = Users.objects.all()
+    serializer_class = UserSerializer
+
+
+class UserDetails(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Users.objects.all()
+    serializer_class = UserSerializer
+
+
+******* VIEWSETS *********************
+
+class UserViewset(ModelViewSet):
+	queryset = Users.objects.all()
+	serializer_class = UserSerializer
+
+-> Utile quand on ne fait que des CRUD sur des entités de bases (sans jointure, ni traitement particulier)
+
+ATTENTION! Beaucoup de comportement caché (par exemple pour supprimer il faut faire users/id/ et non users/id) => se referer a la doc de django pour voir les valeurs par défault des settings.py 
+
+==> On doit notamment écrire nos propres serializers comme cela par exemple:
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Users
+        fields = ('id', 'nom', 'prenom', 'mail', 'adresse', 'ville', 'age')
+        filter_backends = [DjangoFilterBackend]
+		filter_fields = {
+	        'age': ['gte', 'lte'], 
+	        'nom': ['exact'],
+	        'prenom': ['exact'],
+	        'ville': ['exact'],
+	    }
+
+******************************************* Migrations***********************************
+Quand un champ n'est pas pris en compte: 1) le supprimer
+										 2) Faire makemigrations
+										 3) le remettre
+										 4) Faire makemigrations
+										 5) migrate

@@ -1,0 +1,60 @@
+GIT:
+
+BASES:
+	
+1) Créer un repository : git init (dans le dossier qui deviendra le repository)
+2) Ajouter à la staging area : git add <nom_fichier> => a faire a chaque creation/modification
+3) Ajouter a History : git commit -m "Message"
+4) Pour voir la différence entre Working tree et Staging area : git diff
+5) Pour voir la différence entre Staging area et History : git diff --staged => CE QUE L'ON S'APPRETE A COMMIT
+6) Pour voir notre historique de commit : git log (-- nom_fic pour voir les modifs concernant un certain fichier)
+7) Pour voir ce qu'a modifié chaque commit : git log -p
+8) supprimer un fichier :  git rm <nom_fic> ==> supprime le fichier a la fois dans le Working tree et dans staging area
+9) Pour effacer des modifications non committées (remplacer la version working tree par celle de la staging area) : git checkout -- <nom_fic>
+10) pour restaurer un fichier dans la staging area avec le dernier commit : git reset HEAD <nom_fic>
+11) Pour restaurer un fichier dans la staging area et le working tree à partir d'un commit particulier (HEAD par défaut pour le dernier): git checkout <hash> -- <nom_fic>
+12) Ignorer un fichier: le rajouter dans .gitignore (a creer) ou .git/info/exclude
+
+BRANCHES: 
+
+-HEAD pointe sur la branche sur laquelle nous sommes
+-Pour créer une branche : git branch <nom_branche>. Sans param => voir toutes les branches (-a pour toutes les branches, -r pour uniquement les distantes)
+
+-Exemple : ea48890 (HEAD -> master, b2, b1) Adding f2
+Ici on voit que l'on est sur master puisque HEAD pointe dessus. On voit aussi que toutes nos branches pointent sur le meme commit (Adding f2)
+-Se positionner (deplacer le poiteur HEAD donc) sur une branche : git checkout <nom_branche> 
+-Merger une branche: 1) on se place sur master (git checkout master)
+                     2) on merge : git merge <nom_branche>
+                     ==> Mtn master pointe sur le commit sur lequel pointait la branche que l'on vient de merger
+-Voir avec quelle branche on a mergé: git branch --merged
+-Supprimer une branch : git branch -d <nom_branche> (-D pour forcer)
+-Voir la différence entre deux branche git diff master..<nom_branche> ==> en rouge ce qu'il y a sur master, en vert ce qu'il y a dans l'autre branche
+-Pour annuler un merge quand il y a un conflit a resoudre git merge --abort 
+-git checkout hash : se positionner en detached HEAD juste sur un commit (et non sur une branche)
+-git checkout <nom_branch> => fait pointer HEAD sur la branch
+-Quand on créer une branche elle pointe sur le commit sur lequel HEAD pointe mais HEAD ne pointe pas sur la branche ("on est pas sur la branche")
+-Quand on checkout une branche on modifie le working tree et la staging area ==> Il faut avoir commité les modifs que l'on a fait sur la branche avant de passer a une autre
+-quand on veut sauvegarder les modifs avant de commit : git stash <save "message">
+-Appliquer un stash: git stash apply <nom_stash> (par default le plus récent)
+-Pour appliquer un stash et le supprimer :  git stash pop
+-Pour voir tous les stash : git stash list
+
+
+REMOTE:
+
+-Pour voir les repos distants : git remote <-v>
+-Pour recupérer les modifs faites sur une repo distants et mettre a jour son repo local : git fetch <nom_repo> (par defaut origin)
+-Pour merger les modifications récupérées : git merge <nom_remote>/<nom_branche> (ex : git merge origin/master)
+-git pull : git fetch + git merge (par defaut nom_repo : origin et nom_branche : master)
+-Pour mettre a jour le repo distant avec ses modifs : git push <nom_remote> <nom_branche> (Par défault origin et master) => pour faire avancer un remote sur le graph quand on a fait des commits entre temps
+-Pour ajouter un repo distant : git remote add <nom_remote> https....
+-Pour Mettre a jour son local + son origin avec upstream:
+	-git pull upstream master (recupérer les modifs faites sur upstream)
+	-git checkout master (on se met sur sa branche master local)
+	-git merge upstream/master (on merge les upstream/master avec sa branche master sur laquelle on s'est mis)
+	-git push (on met a jour son origin en lui envoyant ce que l'on a récupéré de upstream/master)
+
+-Pour mettre a jour les remotes (origin et upstream) avec son local:
+	-git commit -a -m "Message"
+	-git push (master)
+	-git push upstream (master) 
